@@ -98,5 +98,3 @@ loadModel = True  # will load trained model for tf if True
 jsbRender = True # will send UDP data to flight gear for rendering if True
 jsbRealTime = True  # will slow down the physics to portrait real time rendering
 ```
-
-Some utility files are also included under `/utils`, but they are mostly used for graphing data and aren't used in the `PPO-Plane.ipynb` itself, but included for review nonetheless.
