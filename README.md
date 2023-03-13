@@ -1,3 +1,6 @@
+## Overview
+
+The software is designed to train an agent via Deep Reinforcement Learning to control an aircraft in a simulated environment. The code uses a Proximal Policy Optimization (PPO) algorithm for the learning process that is implemented using Tensorflow. The agent trains in the environment, the JSBSim Flight Dynamics Model, until it reaches a control policy by optimizing a set reward function (having a stable plane).
 
 ## Dependencies
 
