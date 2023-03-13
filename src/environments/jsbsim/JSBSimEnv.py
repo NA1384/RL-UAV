@@ -5,7 +5,8 @@ import time
 
 class Env():
 
-    def __init__(self, scene, orig, dest, n_acts, usePredefinedSeeds, dictObservation, dictAction, dictRotation, speed, pause, qID, render, realTime):
+    def __init__(self, scene, orig, dest, n_acts, usePredefinedSeeds, dictObservation, dictAction, dictRotation, speed,
+                 pause, qID, render, realTime):
         self.scenario = scene
         self.startingPosition = orig
         self.destinationPosition = dest
@@ -25,12 +26,14 @@ class Env():
         self.degToRad = 0.0174533  # conversion from deg to rad
         self.realTime = realTime
         self.id = "JSBSim"
+        self.epochs = 0
+        self.change = 25
 
         if(usePredefinedSeeds):
             np.random.seed(42)
 
         os.environ["JSBSIM_DEBUG"] = str(0)  # set this before creating fdm to stop debug print outs
-        self.fdm = jsbsim.FGFDMExec('./src/environments/jsbsim/jsbsim/', None)  # declaring the sim and setting the path
+        self.fdm = jsbsim.FGFDMExec('./src/environments/jsbsim/jsbsim/')  # declaring the sim and setting the path
         self.physicsPerSec = int(1 / self.fdm.get_delta_t())  # default by jsb. Each physics step is a 120th of 1 sec
         self.realTimeDelay = self.fdm.get_delta_t()
         self.fdm.load_model('c172r')  # loading cessna 172
@@ -39,6 +42,11 @@ class Env():
             self.fdm.set_output_directive('./data_output/flightgear.xml')  # loads xml that initates udp transfer
         self.fdm.run_ic()  # init the sim
         self.fdm.print_simulation_configuration()
+        self.fdm["propulsion/active_engine"] = True  # starts the engine?
+        self.fdm['propulsion/set-running'] = -1  # starts the engine?
+        self.fdm["atmosphere/turb-type"] = 5  # Atmosphere model selection
+        self.fdm["atmosphere/turbulence/milspec/windspeed_at_20ft_AGL-fps"] = 75  # Atmosphere model selection
+        self.fdm["atmosphere/turbulence/milspec/severity"] = 6  # Atmosphere model selection
 
     def send_posi(self, posi, rotation):
         position = posi[:]
@@ -60,14 +68,16 @@ class Env():
         self.fdm["ic/ve-fps"] = rotation[self.dictRotation["eastVelo"]] * self.msToFs  # Local frame y-axis (east) velocity initial condition in feet/second
         self.fdm["ic/vd-fps"] = -rotation[self.dictRotation["verticalVelo"]] * self.msToFs  # Local frame z-axis (down) velocity initial condition in feet/second
         self.fdm["ic/vn-fps"] = -rotation[self.dictRotation["northVelo"]] * self.msToFs  # Local frame x-axis (north) velocity initial condition in feet/second
-        self.fdm["propulsion/refuel"] = True  # refuels the plane?
-        self.fdm["propulsion/active_engine"] = True  # starts the engine?
-        self.fdm["propulsion/set-running"] = 0  # starts the engine?
-        self.fdm["atmosphere/turb-type"] = 5  # Atmosphere model selection
-        self.fdm["atmosphere/turbulence/milspec/windspeed_at_20ft_AGL-fps"] = 75  # Atmosphere model selection
-        self.fdm["atmosphere/turbulence/milspec/severity"] = 6  # Atmosphere model selection
+        # self.fdm["propulsion/refuel"] = True  # refuels the plane?
+        # self.fdm["propulsion/active_engine"] = True  # starts the engine?
+        # self.fdm['propulsion/engine/set-running'] = 1  # starts the engine?
+        # self.fdm['propulsion/tank[0]/contents-lbs'] = 200  # refuels the plane?
 
-        '''
+        if self.epochs % self.change == 0 and self.epochs != 0:
+            self.fdm["atmosphere/turbulence/milspec/windspeed_at_20ft_AGL-fps"] = np.random.randint(75)  # Atmosphere model selection
+            self.fdm["atmosphere/turbulence/milspec/severity"] = np.random.randint(6)  # Atmosphere model selection
+
+        '''        
         The Milspec and Tustin models are described in the Yeager report cited below. They both use a Dryden 
         spectrum model whose parameters (scale lengths and intensities) are modelled according to MIL-F-8785C. 
         Parameters are modelled differently for altitudes below 1000ft and above 2000ft, for altitudes in between 
@@ -184,6 +194,7 @@ class Env():
         self.desiredState = desintaionState
         self.send_posi(self.startingPosition, resetPosition)
         self.send_velo(resetPosition)
+        self.epochs = self.epochs + 1
 
         self.fdm.run_ic()
         self.scenario.resetStateDepth()
